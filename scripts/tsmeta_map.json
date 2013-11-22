@@ -24,6 +24,38 @@
                         "index": "not_analyzed"
                     }
                 }
+            },
+            "keys": {
+                "properties": {
+                    "uid": {
+                        "type": "string",
+                        "index": "not_analyzed"
+                    },
+                    "name": {
+                        "type": "string",
+                        "index": "not_analyzed"
+                    }
+                }
+            },
+            "values": {
+                "properties": {
+                    "uid": {
+                        "type": "string",
+                        "index": "not_analyzed"
+                    },
+                    "name": {
+                        "type": "string",
+                        "index": "not_analyzed"
+                    }
+                }
+            },
+            "kv_map": {
+                "properties": {
+                    "kvmap": {
+                        "type": "string",
+                        "index": "not_analyzed"
+                    }
+                }
             }
         }
     }
