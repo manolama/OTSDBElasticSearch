@@ -105,10 +105,10 @@ class TSMetaHack {
     for (UIDMeta m : tags) {
       if (m.getType() == UniqueIdType.TAGK) {
         keys.add(m);
-        key = "TAGK_" + m.getUID();
+        key = "TAGK_" + m.getUID() + "-" + m.getName();
       } else if (m.getType() == UniqueIdType.TAGV) {
         values.add(m);
-        value = "TAGV_" + m.getUID();
+        value = "TAGV_" + m.getUID() + "-" + m.getName();
       }
 
       if (key != null && value != null) {

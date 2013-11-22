@@ -50,12 +50,11 @@
                 }
             },
             "kv_map": {
-                "properties": {
-                    "kvmap": {
-                        "type": "string",
-                        "index": "not_analyzed"
-                    }
-                }
+                "type": "multi_field",
+		"fields": {
+			"kv_map": { "type" : "string", "index" : "not_analyzed", "store" : "yes" },
+			"analyzed": { "type" : "string", "index" : "analyzed", "store" : "true" }
+		}
             }
         }
     }
