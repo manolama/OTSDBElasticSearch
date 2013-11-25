@@ -78,6 +78,7 @@ class TSMetaHack {
   private ArrayList<UIDMeta> keys = null;
   private ArrayList<UIDMeta> values = null;
   private ArrayList<String> kv_map = null;
+  private ArrayList<String> kv_map_name = null;
 
   public TSMetaHack(TSMeta meta) {
     tsuid = meta.getTSUID();
@@ -99,20 +100,26 @@ class TSMetaHack {
     keys = new ArrayList<UIDMeta>();
     values = new ArrayList<UIDMeta>();
     kv_map = new ArrayList<String>();
+    kv_map_name = new ArrayList<String>();
 
     String key = null;
+    String key_name = null;
     String value = null;
+    String value_name = null;
     for (UIDMeta m : tags) {
       if (m.getType() == UniqueIdType.TAGK) {
         keys.add(m);
-        key = "TAGK_" + m.getUID() + "-" + m.getName();
+        key = "TAGK_" + m.getUID();
+        key_name = "TAGK_" + m.getName();
       } else if (m.getType() == UniqueIdType.TAGV) {
         values.add(m);
-        value = "TAGV_" + m.getUID() + "-" + m.getName();
+        value = "TAGV_" + m.getUID();
+        value_name = "TAGV_" + m.getName();
       }
 
       if (key != null && value != null) {
-        kv_map.add(key + "=" + value);
+        kv_map.add(key + "___" + value);
+        kv_map_name.add(key + "___" + value);
         key = value = null;
       }
     }
@@ -204,6 +211,12 @@ class TSMetaHack {
   public final ArrayList<String> getKvMap() {
     return kv_map;
   }
+
+  @JsonProperty("kv_map_name")
+  public final ArrayList<String> getKvMapName() {
+    return kv_map_name;
+  }
+
 }
 
 public final class ElasticSearch extends SearchPlugin {
