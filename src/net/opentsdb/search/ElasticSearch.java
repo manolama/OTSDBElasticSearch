@@ -119,8 +119,8 @@ class TSMetaHack {
 
       if (key != null && value != null) {
         kv_map.add(key + "___" + value);
-        kv_map_name.add(key + "___" + value);
-        key = value = null;
+        kv_map_name.add(key_name + "___" + value_name);
+        key_name = value_name = key = value = null;
       }
     }
   }
