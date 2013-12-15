@@ -15,6 +15,7 @@ package net.opentsdb.search;
 import httpfailover.FailoverHttpClient;
 
 import java.io.IOException;
+import java.io.ByteArrayOutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -49,64 +50,40 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 import com.stumbleupon.async.Deferred;
 
-// This is all terrible but I don't have time to figure out how to inject
-// only the extra data we need with Jackson.
-@JsonIgnoreProperties(ignoreUnknown = true)
-@JsonInclude(Include.NON_NULL)
-@JsonAutoDetect(fieldVisibility = Visibility.PUBLIC_ONLY)
-class TSMetaHack {
-  private String tsuid = "";
-  private UIDMeta metric = null;
-  private ArrayList<UIDMeta> tags = null;
-  private String display_name = "";
-  private String description = "";
-  private String notes = "";
-  private long created = 0;
-  private HashMap<String, String> custom = null;
-  private String units = "";
-  private String data_type = "";
-  private int retention = 0;
-  private double max = Double.NaN;
-  private double min = Double.NaN; 
-  private long last_received = 0;
-  private long total_dps;
-  private ArrayList<UIDMeta> keys = null;
-  private ArrayList<UIDMeta> values = null;
-  private ArrayList<String> kv_map = null;
-  private ArrayList<String> kv_map_name = null;
-
-  public TSMetaHack(TSMeta meta) {
-    tsuid = meta.getTSUID();
-    metric = meta.getMetric();
-    tags = meta.getTags();
-    display_name = meta.getDisplayName();
-    description = meta.getDescription();
-    notes = meta.getNotes();
-    created = meta.getCreated();
-    custom = meta.getCustom();
-    units = meta.getUnits();
-    data_type = meta.getDataType();
-    retention = meta.getRetention();
-    min = meta.getMax();
-    max = meta.getMin();
-    last_received = meta.getLastReceived();
-    total_dps = meta.getTotalDatapoints();
-
-    keys = new ArrayList<UIDMeta>();
-    values = new ArrayList<UIDMeta>();
-    kv_map = new ArrayList<String>();
-    kv_map_name = new ArrayList<String>();
+/*
+ * Helper function to add data to the base TSMeta when it is serialized to JSON.
+ *
+ * This method adds keys, values, kv_map and kv_map_name to the generated JSON
+ * allowing for searches to find specific key/values by name/uid and to find
+ * TSUIDs with specific key=value.
+ *
+ * keys: Array of normal UIDMeta objects only containing TAGK
+ * values: Array of normal UIDMeta objects only containing TAGV
+ * kv_map: Array of strings in the form TAGK_UID=TAGV_UID
+ * kv_map_name: Array of strings in the form TAGK_keyname=TAGV_valuename
+ *
+ * Note: the tags object was not removed, this means keys/values is just
+ * duplicate data. For search purposes tags should probably be removed.
+ */
+class TSMetaAugment {
+  public static final byte[] serializeToBytes(final TSMeta meta) {
+    ArrayList<UIDMeta> keys = new ArrayList<UIDMeta>();
+    ArrayList<UIDMeta> values = new ArrayList<UIDMeta>();
+    ArrayList<String> kv_map = new ArrayList<String>();
+    ArrayList<String> kv_map_name = new ArrayList<String>();
 
     String key = null;
     String key_name = null;
     String value = null;
     String value_name = null;
-    for (UIDMeta m : tags) {
+    for (UIDMeta m : meta.getTags()) {
       if (m.getType() == UniqueIdType.TAGK) {
         keys.add(m);
         key = "TAGK_" + m.getUID();
@@ -118,105 +95,28 @@ class TSMetaHack {
       }
 
       if (key != null && value != null) {
-        kv_map.add(key + "___" + value);
-        kv_map_name.add(key_name + "___" + value_name);
+        kv_map.add(key + "=" + value);
+        kv_map_name.add(key_name + "=" + value_name);
         key_name = value_name = key = value = null;
       }
     }
-  }
 
-  /** @return the TSUID as a hex encoded string */
-  public final String getTSUID() {
-    return tsuid;
-  }
+    ObjectMapper mapper = JSON.getMapper();
+    ObjectNode root = (ObjectNode) mapper.valueToTree(meta);
 
-  /** @return the metric UID meta object */
-  public final UIDMeta getMetric() {
-    return metric;
-  }
+    root.put("keys", mapper.valueToTree(keys));
+    root.put("values", mapper.valueToTree(values));
+    root.put("kv_map", mapper.valueToTree(kv_map));
+    root.put("kv_map_name", mapper.valueToTree(kv_map_name));
 
-  /** @return the tag UID meta objects in an array, tagk first, then tagv, etc */
-  public final ArrayList<UIDMeta> getTags() {
-    return tags;
+    try {
+      ByteArrayOutputStream o = new ByteArrayOutputStream();
+      mapper.writeTree(mapper.getFactory().createGenerator(o), root);
+      return o.toByteArray();
+    } catch (IOException e) {
+      return new byte[0];
+    }
   }
-
-  /** @return optional display name */
-  public final String getDisplayName() {
-    return display_name;
-  }
-
-  /** @return optional description */
-  public final String getDescription() {
-    return description;
-  }
-
-  /** @return optional notes */
-  public final String getNotes() {
-    return notes;
-  }
-
-  /** @return when the TSUID was first recorded, Unix epoch */
-  public final long getCreated() {
-    return created;
-  }
-
-  /** @return optional custom key/value map, may be null */
-  public final HashMap<String, String> getCustom() {
-    return custom;
-  }
-
-  /** @return optional units */
-  public final String getUnits() {
-    return units;
-  }
-
-  /** @return optional data type */
-  public final String getDataType() {
-    return data_type;
-  }
-
-  /** @return optional retention, default of 0 means retain indefinitely */
-  public final int getRetention() {
-    return retention;
-  }
-
-  /** @return optional max value, set by the user */
-  public final double getMax() {
-    return max;
-  }
-
-  /** @return optional min value, set by the user */
-  public final double getMin() {
-    return min;
-  }
-
-  /** @return the last received timestamp, Unix epoch */
-  public final long getLastReceived() {
-    return last_received;
-  }
-
-  /** @return the total number of data points as tracked by the meta data */
-  public final long getTotalDatapoints() {
-    return this.total_dps;
-  }
-
-  public final ArrayList<UIDMeta> getKeys() {
-    return keys;
-  }
-  public final ArrayList<UIDMeta> getValues() {
-    return values;
-  }
-
-  @JsonProperty("kv_map")
-  public final ArrayList<String> getKvMap() {
-    return kv_map;
-  }
-
-  @JsonProperty("kv_map_name")
-  public final ArrayList<String> getKvMapName() {
-    return kv_map_name;
-  }
-
 }
 
 public final class ElasticSearch extends SearchPlugin {
@@ -276,7 +176,7 @@ public final class ElasticSearch extends SearchPlugin {
     uri.append(meta.getTSUID()).append("?replication=async");
     
     final Request post = Request.Post(uri.toString())
-      .bodyByteArray(JSON.serializeToBytes(new TSMetaHack(meta)));
+      .bodyByteArray(TSMetaAugment.serializeToBytes(meta));
     
     final Deferred<Object> result = new Deferred<Object>();
     async.execute(post, new AsyncCB(result));

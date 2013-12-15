@@ -9,7 +9,7 @@
                 "properties": {
                     "name": {
                         "type": "string",
-                        "index": "not_analyzed"
+                        "analyzer": "metricname"
                     }
                 }
             },
@@ -21,7 +21,7 @@
                     },
                     "name": {
                         "type": "string",
-                        "index": "not_analyzed"
+                        "analyzer": "metricname"
                     }
                 }
             },
@@ -33,7 +33,7 @@
                     },
                     "name": {
                         "type": "string",
-                        "index": "not_analyzed"
+                        "analyzer": "metricname"
                     }
                 }
             },
@@ -45,17 +45,17 @@
                     },
                     "name": {
                         "type": "string",
-                        "index": "not_analyzed"
+                        "analyzer": "metricname"
                     }
                 }
             },
             "kv_map": {
                 "type": "string",
-                "index": "not_analyzed"
+                "analyzer": "metricname"
             },
             "kv_map_name": {
                 "type": "string",
-                "index": "not_analyzed"
+                "analyzer": "metricname"
             }
         }
     }
